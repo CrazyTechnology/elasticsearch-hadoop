@@ -209,14 +209,20 @@ public abstract class RestService implements Serializable {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * 查找数据分区的方法
+     * @param settings
+     * @param log
+     * @return
+     */
     public static List<PartitionDefinition> findPartitions(Settings settings, Log log) {
         Version.logVersion();
 
         InitializationUtils.validateSettings(settings);
         InitializationUtils.validateSettingsForReading(settings);
-
+        //es版本
         EsMajorVersion version = InitializationUtils.discoverEsVersion(settings, log);
+        //获取所有节点信息
         List<NodeInfo> nodes = InitializationUtils.discoverNodesIfNeeded(settings, log);
         InitializationUtils.filterNonClientNodesIfNeeded(settings, log);
         InitializationUtils.filterNonDataNodesIfNeeded(settings, log);

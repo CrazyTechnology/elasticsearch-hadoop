@@ -32,13 +32,7 @@ import org.elasticsearch.hadoop.util.unit.TimeValue;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 import static org.elasticsearch.hadoop.rest.Request.Method.DELETE;
@@ -48,11 +42,16 @@ import static org.elasticsearch.hadoop.rest.Request.Method.POST;
 import static org.elasticsearch.hadoop.rest.Request.Method.PUT;
 
 public class RestClient implements Closeable, StatsAware {
-
+    //bulk 请求最多可以有5条错误信息
+    //bulk 请求不是原子的，每个请求都是单独处理因此一个请求的失败不会影响别的请求
     private final static int MAX_BULK_ERROR_MESSAGES = 5;
+    //设置HEAD 请求的最长字符
+    private static final int MAX_HEAD_INDEXORTYPE_LENGTH = 4081;
 
     private NetworkClient network;
     private final ObjectMapper mapper;
+    //设置游标的过期时间
+    //游标查询可以有效地执行大批量的文档查询，游标查询会取某个时间点的快照数据。 查询初始化之后索引上的任何变化会被它忽略。
     private final TimeValue scrollKeepAlive;
     private final boolean indexReadMissingAsEmpty;
     private final HttpRetryPolicy retryPolicy;
@@ -67,13 +66,18 @@ public class RestClient implements Closeable, StatsAware {
 
     private final Stats stats = new Stats();
 
+    //集群的状态，红色，黄色和绿色
+    //红色代表不是所有的主分片都可用
+    //黄色代表不是所有的副分片都可用
+    //绿色代表集群中所有的主分片和副分片都可用
+
     public enum Health {
         RED, YELLOW, GREEN
     }
 
     public RestClient(Settings settings) {
         network = new NetworkClient(settings);
-
+        //设置游标的过期时间
         scrollKeepAlive = TimeValue.timeValueMillis(settings.getScrollKeepAlive());
         indexReadMissingAsEmpty = settings.getIndexReadMissingAsEmpty();
 
@@ -525,7 +529,51 @@ public class RestClient implements Closeable, StatsAware {
         return (res.status() == HttpStatus.OK ? true : false);
     }
 
+    public boolean indexExists(String indexOrType) {
+        List<String> splitIndexOrType=splitIndexOrType(indexOrType);
+        for (String index:splitIndexOrType){
+            if(exists(index)){
+                continue;
+            }else{
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public List<String> splitIndexOrType(String indexOrType){
+        List<String> indexOrTypeList=new ArrayList<String>();
+        if(indexOrType.length()<MAX_HEAD_INDEXORTYPE_LENGTH){
+            return Arrays.asList(indexOrType);
+        }
+        String [] indexOrTypeArray =indexOrType.split(",");
+        StringBuilder sb=new StringBuilder(MAX_HEAD_INDEXORTYPE_LENGTH);
+        boolean newIndexOrType=true;
+        for(int i=0;i<indexOrTypeArray.length;i++){
+            if(sb.length()+indexOrTypeArray[i].length()>MAX_HEAD_INDEXORTYPE_LENGTH){
+                indexOrTypeList.add(sb.toString());
+                sb.delete(0,sb.length());
+            }
+            if(newIndexOrType){
+                sb.append(indexOrTypeArray[i]);
+            }else{
+                sb.append(",").append(indexOrTypeArray[i]);
+            }
+            newIndexOrType=false;
+            if(i==indexOrTypeArray.length-1){
+                indexOrTypeList.add(sb.toString());
+            }
+        }
+        return  indexOrTypeList;
+    }
+
+    /**
+     * 判断👈index是否存在
+     * @param indexOrType
+     * @return
+     */
     public boolean exists(String indexOrType) {
+
         Request req = new SimpleRequest(HEAD, null, indexOrType);
         Response res = executeNotFoundAllowed(req);
 
@@ -533,7 +581,7 @@ public class RestClient implements Closeable, StatsAware {
     }
 
     public boolean touch(String indexOrType) {
-        if (!exists(indexOrType)) {
+        if (!indexExists(indexOrType)) {
             Response response = execute(PUT, indexOrType, false);
 
             if (response.hasFailed()) {

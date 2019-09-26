@@ -68,7 +68,7 @@ public abstract class InitializationUtils {
             Resource readResource = new Resource(settings, true);
 
             try {
-                if (bootstrap.exists(readResource.indexAndType())) {
+                if (bootstrap.indexExists(readResource.indexAndType())) {
                     RestClient.Health status = bootstrap.getHealth(readResource.index());
                     if (status == RestClient.Health.RED) {
                         throw new EsHadoopIllegalStateException("Index specified [" + readResource.index() + "] is either red or " +
