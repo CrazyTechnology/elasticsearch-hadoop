@@ -132,7 +132,7 @@ public class RestUtils {
 
     public static boolean exists(String string) throws Exception {
         ExtendedRestClient rc = new ExtendedRestClient();
-        boolean result = rc.exists(string);
+        boolean result = rc.indexExists(string);
         rc.close();
         return result;
     }

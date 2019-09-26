@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Node information
+ * Node information  节点信息
  */
 public class NodeInfo implements Serializable {
     private final String id;
