@@ -85,8 +85,7 @@ public class RestClient implements Closeable, StatsAware {
 
         if (ConfigurationOptions.ES_BATCH_WRITE_RETRY_POLICY_SIMPLE.equals(retryPolicyName)) {
             retryPolicyName = SimpleHttpRetryPolicy.class.getName();
-        }
-        else if (ConfigurationOptions.ES_BATCH_WRITE_RETRY_POLICY_NONE.equals(retryPolicyName)) {
+        } else if (ConfigurationOptions.ES_BATCH_WRITE_RETRY_POLICY_NONE.equals(retryPolicyName)) {
             retryPolicyName = NoHttpRetryPolicy.class.getName();
         }
 
@@ -142,7 +141,7 @@ public class RestClient implements Closeable, StatsAware {
         return parseContent(execute(GET, q), string);
     }
 
-    @SuppressWarnings("unchecked")
+    //解析请求返回的内容
     private <T> T parseContent(InputStream content, String string) {
         Map<String, Object> map = Collections.emptyMap();
 
@@ -214,7 +213,7 @@ public class RestClient implements Closeable, StatsAware {
             List<String> errorMessageSample = new ArrayList<String>(MAX_BULK_ERROR_MESSAGES);
             int errorMessagesSoFar = 0;
             int entryToDeletePosition = 0; // head of the list
-            for (Iterator<Map> iterator = r.readValues(parser); iterator.hasNext();) {
+            for (Iterator<Map> iterator = r.readValues(parser); iterator.hasNext(); ) {
                 Map map = iterator.next();
                 Map values = (Map) map.values().iterator().next();
                 Integer status = (Integer) values.get("status");
@@ -231,14 +230,12 @@ public class RestClient implements Closeable, StatsAware {
                             errorMessageSample.add(error);
                             errorMessagesSoFar++;
                         }
-                    }
-                    else {
+                    } else {
                         String message = (status != null ?
                                 String.format("[%s] returned %s(%s) - %s", response.uri(), HttpStatus.getText(status), status, prettify(error)) : prettify(error));
                         throw new EsHadoopInvalidRequest(String.format("Found unrecoverable error %s; Bailing out..", message));
                     }
-                }
-                else {
+                } else {
                     stats.bytesAccepted += data.length(entryToDeletePosition);
                     stats.docsAccepted += 1;
                     data.remove(entryToDeletePosition);
@@ -264,36 +261,29 @@ public class RestClient implements Closeable, StatsAware {
                 if (err == null) {
                     if (m.containsKey("reason")) {
                         error = m.get("reason").toString();
-                    }
-                    else if (m.containsKey("caused_by")) {
+                    } else if (m.containsKey("caused_by")) {
                         error += ";" + ((Map) m.get("caused_by")).get("reason");
-                    }
-                    else {
+                    } else {
                         error = m.toString();
                     }
-                }
-                else {
+                } else {
                     if (err instanceof List) {
                         Object nested = ((List) err).get(0);
                         if (nested instanceof Map) {
                             Map nestedM = (Map) nested;
                             if (nestedM.containsKey("reason")) {
                                 error = nestedM.get("reason").toString();
-                            }
-                            else {
+                            } else {
                                 error = nested.toString();
                             }
-                        }
-                        else {
+                        } else {
                             error = nested.toString();
                         }
-                    }
-                    else {
+                    } else {
                         error = err.toString();
                     }
                 }
-            }
-            else {
+            } else {
                 error = err.toString();
             }
         }
@@ -335,12 +325,10 @@ public class RestClient implements Closeable, StatsAware {
             Response res = executeNotFoundAllowed(req);
             if (res.status() == HttpStatus.OK) {
                 shardsJson = parseContent(res.body(), "shards");
-            }
-            else {
+            } else {
                 shardsJson = Collections.emptyList();
             }
-        }
-        else {
+        } else {
             shardsJson = get(target, "shards");
         }
 
@@ -370,12 +358,11 @@ public class RestClient implements Closeable, StatsAware {
 
         if (internalVersion.onOrAfter(EsMajorVersion.V_2_X)) {
             sb.append("\"bool\": { \"must\":[");
-        }
-        else {
+        } else {
             sb.append("\"constant_score\":{ \"filter\": { \"and\":[");
 
         }
-        for (String field: fields) {
+        for (String field : fields) {
             sb.append(String.format(Locale.ROOT, "\n{ \"exists\":{ \"field\":\"%s\"} },", field));
         }
         // remove trailing ,
@@ -455,12 +442,12 @@ public class RestClient implements Closeable, StatsAware {
     protected Response executeNotFoundAllowed(Request req) {
         Response res = execute(req, false);
         switch (res.status()) {
-        case HttpStatus.OK:
-            break;
-        case HttpStatus.NOT_FOUND:
-            break;
-        default:
-            checkResponse(req, res);
+            case HttpStatus.OK:
+                break;
+            case HttpStatus.NOT_FOUND:
+                break;
+            default:
+                checkResponse(req, res);
         }
 
         return res;
@@ -472,11 +459,10 @@ public class RestClient implements Closeable, StatsAware {
             String msg = null;
             // try to parse the answer
             try {
-                msg = extractError(this.<Map> parseContent(response.body(), null));
+                msg = extractError(this.<Map>parseContent(response.body(), null));
                 if (response.isClientError()) {
                     msg = msg + "\n" + request.body();
-                }
-                else {
+                } else {
                     msg = prettify(msg, request.body());
                 }
             } catch (Exception ex) {
@@ -517,6 +503,7 @@ public class RestClient implements Closeable, StatsAware {
         Response res = executeNotFoundAllowed(req);
         return (res.status() == HttpStatus.OK ? true : false);
     }
+
     public boolean deleteScroll(String scrollId) {
         BytesArray body;
         if (internalVersion.onOrAfter(EsMajorVersion.V_2_X)) {
@@ -530,45 +517,46 @@ public class RestClient implements Closeable, StatsAware {
     }
 
     public boolean indexExists(String indexOrType) {
-        List<String> splitIndexOrType=splitIndexOrType(indexOrType);
-        for (String index:splitIndexOrType){
-            if(exists(index)){
+        List<String> splitIndexOrType = splitIndexOrType(indexOrType);
+        for (String index : splitIndexOrType) {
+            if (exists(index)) {
                 continue;
-            }else{
+            } else {
                 return false;
             }
         }
         return true;
     }
 
-    public List<String> splitIndexOrType(String indexOrType){
-        List<String> indexOrTypeList=new ArrayList<String>();
-        if(indexOrType.length()<MAX_HEAD_INDEXORTYPE_LENGTH){
+    public List<String> splitIndexOrType(String indexOrType) {
+        List<String> indexOrTypeList = new ArrayList<String>();
+        if (indexOrType.length() < MAX_HEAD_INDEXORTYPE_LENGTH) {
             return Arrays.asList(indexOrType);
         }
-        String [] indexOrTypeArray =indexOrType.split(",");
-        StringBuilder sb=new StringBuilder(MAX_HEAD_INDEXORTYPE_LENGTH);
-        boolean newIndexOrType=true;
-        for(int i=0;i<indexOrTypeArray.length;i++){
-            if(sb.length()+indexOrTypeArray[i].length()>MAX_HEAD_INDEXORTYPE_LENGTH){
+        String[] indexOrTypeArray = indexOrType.split(",");
+        StringBuilder sb = new StringBuilder(MAX_HEAD_INDEXORTYPE_LENGTH);
+        boolean newIndexOrType = true;
+        for (int i = 0; i < indexOrTypeArray.length; i++) {
+            if (sb.length() + indexOrTypeArray[i].length() > MAX_HEAD_INDEXORTYPE_LENGTH) {
                 indexOrTypeList.add(sb.toString());
-                sb.delete(0,sb.length());
+                sb.delete(0, sb.length());
             }
-            if(newIndexOrType){
+            if (newIndexOrType) {
                 sb.append(indexOrTypeArray[i]);
-            }else{
+            } else {
                 sb.append(",").append(indexOrTypeArray[i]);
             }
-            newIndexOrType=false;
-            if(i==indexOrTypeArray.length-1){
+            newIndexOrType = false;
+            if (i == indexOrTypeArray.length - 1) {
                 indexOrTypeList.add(sb.toString());
             }
         }
-        return  indexOrTypeList;
+        return indexOrTypeList;
     }
 
     /**
      * 判断👈index是否存在
+     *
      * @param indexOrType
      * @return
      */
