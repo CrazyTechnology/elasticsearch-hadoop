@@ -18,15 +18,6 @@
  */
 package org.elasticsearch.hadoop.rest;
 
-import java.io.Closeable;
-import java.net.BindException;
-import java.net.NoRouteToHostException;
-import java.net.UnknownHostException;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.elasticsearch.hadoop.EsHadoopException;
@@ -40,12 +31,23 @@ import org.elasticsearch.hadoop.util.Assert;
 import org.elasticsearch.hadoop.util.ByteSequence;
 import org.elasticsearch.hadoop.util.SettingsUtils;
 
+import java.io.Closeable;
+import java.net.BindException;
+import java.net.NoRouteToHostException;
+import java.net.UnknownHostException;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 
 public class NetworkClient implements StatsAware, Closeable {
     private static Log log = LogFactory.getLog(NetworkClient.class);
 
     private final Settings settings;
+    //节点信息
     private final List<String> nodes;
+    //失败的节点
     private final Map<String, Throwable> failedNodes = new LinkedHashMap<String, Throwable>();
 
     private TransportFactory transportFactory;
@@ -105,11 +107,13 @@ public class NetworkClient implements StatsAware, Closeable {
 
         boolean newNode;
         do {
+            //实例化Simple,传入请求类型、请求路径、请求参数和请求体
             SimpleRequest routedRequest = new SimpleRequest(request.method(), null, request.path(), request.params(), request.body());
 
             newNode = false;
             try {
                 response = currentTransport.execute(routedRequest);
+                //获取请求体，判断是否为空
                 ByteSequence body = routedRequest.body();
                 if (body != null) {
                     stats.bytesSent += body.length();

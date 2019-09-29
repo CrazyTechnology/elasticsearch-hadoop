@@ -22,11 +22,14 @@ import org.elasticsearch.hadoop.util.ByteSequence;
 import org.elasticsearch.hadoop.util.StringUtils;
 
 public class SimpleRequest implements Request {
-
+    //请求方法类型，是post、get、head
     private final Method method;
     private final CharSequence uri;
+    //请求路径
     private final CharSequence path;
+    //请求参数
     private final CharSequence params;
+    //请求体
     private final ByteSequence body;
 
     public SimpleRequest(Method method, CharSequence uri, CharSequence path) {

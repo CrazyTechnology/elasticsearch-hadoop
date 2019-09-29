@@ -23,6 +23,7 @@ import org.elasticsearch.hadoop.util.ByteSequence;
 
 public interface Request {
 
+    //请求类型
     enum Method {
         DELETE, GET, HEAD, POST, PUT
     };

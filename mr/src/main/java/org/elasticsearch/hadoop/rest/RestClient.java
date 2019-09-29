@@ -18,14 +18,7 @@ import org.elasticsearch.hadoop.serialization.json.JacksonJsonGenerator;
 import org.elasticsearch.hadoop.serialization.json.JacksonJsonParser;
 import org.elasticsearch.hadoop.serialization.json.JsonFactory;
 import org.elasticsearch.hadoop.serialization.json.ObjectReader;
-import org.elasticsearch.hadoop.util.ByteSequence;
-import org.elasticsearch.hadoop.util.BytesArray;
-import org.elasticsearch.hadoop.util.EsMajorVersion;
-import org.elasticsearch.hadoop.util.FastByteArrayOutputStream;
-import org.elasticsearch.hadoop.util.IOUtils;
-import org.elasticsearch.hadoop.util.ObjectUtils;
-import org.elasticsearch.hadoop.util.StringUtils;
-import org.elasticsearch.hadoop.util.TrackingBytesArray;
+import org.elasticsearch.hadoop.util.*;
 import org.elasticsearch.hadoop.util.encoding.HttpEncodingTools;
 import org.elasticsearch.hadoop.util.unit.TimeValue;
 
@@ -35,11 +28,7 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.Map.Entry;
 
-import static org.elasticsearch.hadoop.rest.Request.Method.DELETE;
-import static org.elasticsearch.hadoop.rest.Request.Method.GET;
-import static org.elasticsearch.hadoop.rest.Request.Method.HEAD;
-import static org.elasticsearch.hadoop.rest.Request.Method.POST;
-import static org.elasticsearch.hadoop.rest.Request.Method.PUT;
+import static org.elasticsearch.hadoop.rest.Request.Method.*;
 
 public class RestClient implements Closeable, StatsAware {
     //bulk 请求最多可以有5条错误信息
@@ -53,8 +42,11 @@ public class RestClient implements Closeable, StatsAware {
     //设置游标的过期时间
     //游标查询可以有效地执行大批量的文档查询，游标查询会取某个时间点的快照数据。 查询初始化之后索引上的任何变化会被它忽略。
     private final TimeValue scrollKeepAlive;
+    //👈index缺失
     private final boolean indexReadMissingAsEmpty;
+    //分为 NoHttpRetryPolicy和SimpleHttpRetryPolicy,默认是SimpleHttpRetryPolicy
     private final HttpRetryPolicy retryPolicy;
+    //ES内部版本号
     final EsMajorVersion internalVersion;
 
     {
@@ -76,28 +68,32 @@ public class RestClient implements Closeable, StatsAware {
     }
 
     public RestClient(Settings settings) {
+        //传入Setting ,实例化NetworkClient对象。用来执行execut()方法
         network = new NetworkClient(settings);
         //设置游标的过期时间
         scrollKeepAlive = TimeValue.timeValueMillis(settings.getScrollKeepAlive());
+        //是否允许读取不存在的索引并返回空数据集
         indexReadMissingAsEmpty = settings.getIndexReadMissingAsEmpty();
-
+        //重试机制默认是simple
         String retryPolicyName = settings.getBatchWriteRetryPolicy();
-
+        //判断重试机制是None还是Simple
         if (ConfigurationOptions.ES_BATCH_WRITE_RETRY_POLICY_SIMPLE.equals(retryPolicyName)) {
             retryPolicyName = SimpleHttpRetryPolicy.class.getName();
         } else if (ConfigurationOptions.ES_BATCH_WRITE_RETRY_POLICY_NONE.equals(retryPolicyName)) {
             retryPolicyName = NoHttpRetryPolicy.class.getName();
         }
-
+        //使用映射方式，初始化retryPolicy对象。
         retryPolicy = ObjectUtils.instantiate(retryPolicyName, settings);
         // Assume that the elasticsearch major version is the latest if the version is not already present in the settings
         internalVersion = settings.getInternalVersionOrLatest();
     }
 
+    //通过_nodes/http 获取集群中节点的信息
     public List<NodeInfo> getHttpNodes(boolean clientNodeOnly) {
         Map<String, Map<String, Object>> nodesData = get("_nodes/http", "nodes");
+        //NodeInfo 包括节点的Ip,Id,节点类型,host等
         List<NodeInfo> nodes = new ArrayList<NodeInfo>();
-
+        //将Map中的节点信息封装到List集合中
         for (Entry<String, Map<String, Object>> entry : nodesData.entrySet()) {
             NodeInfo node = new NodeInfo(entry.getKey(), entry.getValue());
             if (node.hasHttp() && (!clientNodeOnly || node.isClient())) {
@@ -107,10 +103,23 @@ public class RestClient implements Closeable, StatsAware {
         return nodes;
     }
 
+    /**
+     * 获取集群中的client节点信息
+     * 该节点只能处理路由请求，处理搜索，分发索引操作等
+     * 从本质上来说该客户节点表现为智能负载平衡器。
+     * 独立的客户端节点在一个比较大的集群中是非常有用的，他协调主节点和数据节点，
+     * 客户端节点加入集群可以得到集群的状态，根据集群的状态可以直接路由请求。
+     */
     public List<NodeInfo> getHttpClientNodes() {
         return getHttpNodes(true);
     }
 
+    /**
+     * 获取集群中的Data节点信息。
+     * 数据节点主要是存储索引数据的节点，主要对文档进行增删改查操作，聚合操作等。数据节点对cpu，内存，io要求较高
+     *
+     * @return
+     */
     public List<NodeInfo> getHttpDataNodes() {
         List<NodeInfo> nodes = getHttpNodes(false);
 
@@ -118,30 +127,44 @@ public class RestClient implements Closeable, StatsAware {
         while (it.hasNext()) {
             NodeInfo node = it.next();
             if (!node.isData()) {
+                //将不是Data节点的信息删除
                 it.remove();
             }
         }
         return nodes;
     }
 
+    /**
+     * 获取集群中的Ingest节点信息
+     * ingest节点用来在真正对文档进行索引之前做预处理。
+     * 所有的节点都是默认支持ingest的，任何节点都可以处理ingest请求，也可以创建一个专门的Ingest nodes
+     */
     public List<NodeInfo> getHttpIngestNodes() {
+        //调用getHtttpNodes方法获取节点信息
         List<NodeInfo> nodes = getHttpNodes(false);
 
         Iterator<NodeInfo> it = nodes.iterator();
         while (it.hasNext()) {
             NodeInfo nodeInfo = it.next();
             if (!nodeInfo.isIngest()) {
+                //将不是ingest的节点删除
                 it.remove();
             }
         }
         return nodes;
     }
 
+    /**
+     * 发送Get请求
+     */
     public <T> T get(String q, String string) {
+        //execute()方法执行完返回的是🔠inputStream 流对象
         return parseContent(execute(GET, q), string);
     }
 
-    //解析请求返回的内容
+    /**
+     * 解析请求返回的内容
+     */
     private <T> T parseContent(InputStream content, String string) {
         Map<String, Object> map = Collections.emptyMap();
 
@@ -396,10 +419,13 @@ public class RestClient implements Closeable, StatsAware {
     }
 
     protected InputStream execute(Request request) {
+        //调用execute返回Response 对象，然后调用body()方法返回inputStream 流对象
         return execute(request, true).body();
     }
 
     protected InputStream execute(Method method, String path) {
+        //Method 是一个枚举类型，path 是请求的路径
+        //实例化一个SimpleRequest 对象
         return execute(new SimpleRequest(method, null, path));
     }
 
@@ -432,6 +458,7 @@ public class RestClient implements Closeable, StatsAware {
     }
 
     protected Response execute(Request request, boolean checkStatus) {
+        //调用NetworkClient 对象的execute()方法
         Response response = network.execute(request);
         if (checkStatus) {
             checkResponse(request, response);
@@ -479,6 +506,7 @@ public class RestClient implements Closeable, StatsAware {
         }
     }
 
+    //根据传入的scrollId 进行游标操作获取数据
     public InputStream scroll(String scrollId) {
         // NB: dynamically get the stats since the transport can change
         long start = network.transportStats().netTotalTime;
@@ -498,6 +526,7 @@ public class RestClient implements Closeable, StatsAware {
         }
     }
 
+    //删除索引
     public boolean delete(String indexOrType) {
         Request req = new SimpleRequest(DELETE, null, indexOrType);
         Response res = executeNotFoundAllowed(req);
@@ -516,6 +545,7 @@ public class RestClient implements Closeable, StatsAware {
         return (res.status() == HttpStatus.OK ? true : false);
     }
 
+    //批量请求，防止索引过长导致的问题
     public boolean indexExists(String indexOrType) {
         List<String> splitIndexOrType = splitIndexOrType(indexOrType);
         for (String index : splitIndexOrType) {
@@ -528,6 +558,7 @@ public class RestClient implements Closeable, StatsAware {
         return true;
     }
 
+    //切分过长的👈index
     public List<String> splitIndexOrType(String indexOrType) {
         List<String> indexOrTypeList = new ArrayList<String>();
         if (indexOrType.length() < MAX_HEAD_INDEXORTYPE_LENGTH) {

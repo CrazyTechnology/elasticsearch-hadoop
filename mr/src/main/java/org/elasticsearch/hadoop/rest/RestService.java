@@ -23,11 +23,7 @@ import org.elasticsearch.hadoop.EsHadoopIllegalArgumentException;
 import org.elasticsearch.hadoop.cfg.ConfigurationOptions;
 import org.elasticsearch.hadoop.cfg.FieldPresenceValidation;
 import org.elasticsearch.hadoop.cfg.Settings;
-import org.elasticsearch.hadoop.rest.query.BoolQueryBuilder;
-import org.elasticsearch.hadoop.rest.query.ConstantScoreQueryBuilder;
-import org.elasticsearch.hadoop.rest.query.QueryBuilder;
-import org.elasticsearch.hadoop.rest.query.QueryUtils;
-import org.elasticsearch.hadoop.rest.query.RawQueryBuilder;
+import org.elasticsearch.hadoop.rest.query.*;
 import org.elasticsearch.hadoop.rest.request.GetAliasesRequestBuilder;
 import org.elasticsearch.hadoop.serialization.ScrollReader;
 import org.elasticsearch.hadoop.serialization.ScrollReader.ScrollReaderConfig;
@@ -38,13 +34,7 @@ import org.elasticsearch.hadoop.serialization.dto.ShardInfo;
 import org.elasticsearch.hadoop.serialization.dto.mapping.Field;
 import org.elasticsearch.hadoop.serialization.dto.mapping.MappingUtils;
 import org.elasticsearch.hadoop.serialization.field.IndexExtractor;
-import org.elasticsearch.hadoop.util.Assert;
-import org.elasticsearch.hadoop.util.EsMajorVersion;
-import org.elasticsearch.hadoop.util.IOUtils;
-import org.elasticsearch.hadoop.util.ObjectUtils;
-import org.elasticsearch.hadoop.util.SettingsUtils;
-import org.elasticsearch.hadoop.util.StringUtils;
-import org.elasticsearch.hadoop.util.Version;
+import org.elasticsearch.hadoop.util.*;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -52,15 +42,7 @@ import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 public abstract class RestService implements Serializable {
     public static class PartitionReader implements Closeable {
@@ -285,6 +267,7 @@ public abstract class RestService implements Serializable {
 
     /**
      * Create one {@link PartitionDefinition} per shard for each requested index.
+     * 查询分区的信息，返回分区信息的List集合
      */
     static List<PartitionDefinition> findShardPartitions(Settings settings, Field mapping, Map<String, NodeInfo> nodes,
                                                          List<List<Map<String, Object>>> shards, Log log) {

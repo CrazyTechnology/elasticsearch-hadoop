@@ -22,6 +22,7 @@ import org.elasticsearch.hadoop.EsHadoopIllegalArgumentException;
 
 /**
  * Elasticsearch major version information, useful to check client's query compatibility with the Rest API.
+ * 检测es的版本，用来检查客户端查询是否和集群的版本匹配
  */
 public class EsMajorVersion {
     public static final EsMajorVersion V_0_X = new EsMajorVersion((byte) 0, "0.x");

@@ -18,8 +18,8 @@
  */
 package org.elasticsearch.hadoop.rest.commonshttp;
 
-import org.apache.commons.httpclient.*;
 import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.httpclient.*;
 import org.apache.commons.httpclient.auth.AuthScope;
 import org.apache.commons.httpclient.methods.*;
 import org.apache.commons.httpclient.params.HttpClientParams;
@@ -472,11 +472,12 @@ public class CommonsHttpTransport implements Transport, StatsAware {
         if (log.isTraceEnabled()) {
             log.trace(String.format("Tx %s[%s]@[%s][%s]?[%s] w/ payload [%s]", proxyInfo, request.method().name(), httpInfo, request.path(), request.params(), request.body()));
         }
-
+        //记录请求开始时间
         long start = System.currentTimeMillis();
         try {
             client.executeMethod(http);
         } finally {
+            //统计请求耗时时间
             stats.netTotalTime += (System.currentTimeMillis() - start);
         }
 

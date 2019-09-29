@@ -18,69 +18,21 @@
  */
 package org.elasticsearch.spark.sql
 
-import java.util.ArrayList
-import java.util.{ LinkedHashSet => JHashSet }
-import java.util.{ List => JList }
-import java.util.{ Map => JMap }
-import java.util.Properties
+import java.util.{ArrayList, Properties, LinkedHashSet => JHashSet, List => JList, Map => JMap}
 
-import scala.collection.JavaConverters.asScalaBufferConverter
-import scala.collection.JavaConverters.propertiesAsScalaMapConverter
-import scala.collection.mutable.ArrayBuffer
-import org.apache.spark.sql.types.ArrayType
-import org.apache.spark.sql.types.BinaryType
-import org.apache.spark.sql.types.BooleanType
-import org.apache.spark.sql.types.ByteType
-import org.apache.spark.sql.types.DataType
-import org.apache.spark.sql.types.DataTypes
-import org.apache.spark.sql.types.DoubleType
-import org.apache.spark.sql.types.FloatType
-import org.apache.spark.sql.types.IntegerType
-import org.apache.spark.sql.types.LongType
-import org.apache.spark.sql.types.NullType
-import org.apache.spark.sql.types.ShortType
-import org.apache.spark.sql.types.StringType
-import org.apache.spark.sql.types.StructField
-import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.types.TimestampType
+import org.apache.spark.sql.types._
 import org.elasticsearch.hadoop.EsHadoopIllegalArgumentException
-import org.elasticsearch.hadoop.cfg.InternalConfigurationOptions
-import org.elasticsearch.hadoop.cfg.Settings
-import org.elasticsearch.hadoop.rest.InitializationUtils
-import org.elasticsearch.hadoop.rest.RestRepository
-import org.elasticsearch.hadoop.serialization.FieldType.BINARY
-import org.elasticsearch.hadoop.serialization.FieldType.BOOLEAN
-import org.elasticsearch.hadoop.serialization.FieldType.BYTE
-import org.elasticsearch.hadoop.serialization.FieldType.DATE
-import org.elasticsearch.hadoop.serialization.FieldType.DOUBLE
-import org.elasticsearch.hadoop.serialization.FieldType.HALF_FLOAT
-import org.elasticsearch.hadoop.serialization.FieldType.SCALED_FLOAT
-import org.elasticsearch.hadoop.serialization.FieldType.FLOAT
-import org.elasticsearch.hadoop.serialization.FieldType.GEO_POINT
-import org.elasticsearch.hadoop.serialization.FieldType.GEO_SHAPE
-import org.elasticsearch.hadoop.serialization.FieldType.INTEGER
-import org.elasticsearch.hadoop.serialization.FieldType.KEYWORD
-import org.elasticsearch.hadoop.serialization.FieldType.LONG
-import org.elasticsearch.hadoop.serialization.FieldType.NESTED
-import org.elasticsearch.hadoop.serialization.FieldType.NULL
-import org.elasticsearch.hadoop.serialization.FieldType.OBJECT
-import org.elasticsearch.hadoop.serialization.FieldType.SHORT
-import org.elasticsearch.hadoop.serialization.FieldType.STRING
-import org.elasticsearch.hadoop.serialization.FieldType.TEXT
-import org.elasticsearch.hadoop.serialization.dto.mapping.Field
-import org.elasticsearch.hadoop.serialization.dto.mapping.GeoField
-import org.elasticsearch.hadoop.serialization.dto.mapping.GeoPointType
-import org.elasticsearch.hadoop.serialization.dto.mapping.GeoShapeType
-import org.elasticsearch.hadoop.serialization.dto.mapping.MappingUtils
+import org.elasticsearch.hadoop.cfg.{InternalConfigurationOptions, Settings}
+import org.elasticsearch.hadoop.rest.{InitializationUtils, RestRepository}
+import org.elasticsearch.hadoop.serialization.FieldType._
+import org.elasticsearch.hadoop.serialization.dto.mapping._
 import org.elasticsearch.hadoop.serialization.field.FieldFilter
 import org.elasticsearch.hadoop.serialization.field.FieldFilter.NumberedInclude
-import org.elasticsearch.hadoop.util.Assert
-import org.elasticsearch.hadoop.util.IOUtils
-import org.elasticsearch.hadoop.util.SettingsUtils
-import org.elasticsearch.hadoop.util.StringUtils
-import org.elasticsearch.spark.sql.Utils.ROOT_LEVEL_NAME
-import org.elasticsearch.spark.sql.Utils.ROW_INFO_ARRAY_PROPERTY
-import org.elasticsearch.spark.sql.Utils.ROW_INFO_ORDER_PROPERTY
+import org.elasticsearch.hadoop.util.{Assert, IOUtils, SettingsUtils, StringUtils}
+import org.elasticsearch.spark.sql.Utils.{ROOT_LEVEL_NAME, ROW_INFO_ARRAY_PROPERTY, ROW_INFO_ORDER_PROPERTY}
+
+import scala.collection.JavaConverters.{asScalaBufferConverter, propertiesAsScalaMapConverter}
+import scala.collection.mutable.ArrayBuffer
 
 private[sql] object SchemaUtils {
   case class Schema(field: Field, struct: StructType)
@@ -97,6 +49,7 @@ private[sql] object SchemaUtils {
 
     val repo = new RestRepository(cfg)
     try {
+      //检测index是否存在
       if (repo.indexExists(true)) {
         var field = repo.getMapping
         if (field == null) {

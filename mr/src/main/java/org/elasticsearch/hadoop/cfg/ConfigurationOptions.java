@@ -1,21 +1,4 @@
-/*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+
 package org.elasticsearch.hadoop.cfg;
 
 import org.elasticsearch.hadoop.serialization.field.DateIndexFormatter;
@@ -102,7 +85,10 @@ public interface ConfigurationOptions {
     String ES_HTTP_RETRIES = "es.http.retries";
     String ES_HTTP_RETRIES_DEFAULT = "3";
 
-    /** Scroll keep-alive */
+    /**
+     * Scroll keep-alive
+     * 游标默认存在时间，默认5m
+     */
     String ES_SCROLL_KEEPALIVE = "es.scroll.keepalive";
     String ES_SCROLL_KEEPALIVE_DEFAULT = "5m";
 
@@ -137,9 +123,12 @@ public interface ConfigurationOptions {
     String ES_INPUT_JSON_DEFAULT = "no";
 
     /** Index settings */
+    //自动创建index
     String ES_INDEX_AUTO_CREATE = "es.index.auto.create";
+    //默认是yes
     String ES_INDEX_AUTO_CREATE_DEFAULT = "yes";
 
+    //elasticsearch-hadoop是否允许读取不存在的索引（并返回空数据集）或不允许（并引发异常）
     String ES_INDEX_READ_MISSING_AS_EMPTY = "es.index.read.missing.as.empty";
     String ES_INDEX_READ_MISSING_AS_EMPTY_DEFAULT = "false";
 
