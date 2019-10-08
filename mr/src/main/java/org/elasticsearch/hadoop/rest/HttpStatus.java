@@ -18,10 +18,10 @@
  */
 package org.elasticsearch.hadoop.rest;
 
+import org.elasticsearch.hadoop.EsHadoopIllegalArgumentException;
+
 import java.util.HashMap;
 import java.util.Map;
-
-import org.elasticsearch.hadoop.EsHadoopIllegalArgumentException;
 
 public abstract class HttpStatus {
 
@@ -39,6 +39,7 @@ public abstract class HttpStatus {
         CODE_TO_TEXT.put(Integer.valueOf(code), text);
     }
 
+    //http 返回状态的意思
     public static final int CONTINUE = 100;
     public static final int SWITCHING_PROTOCOLS = 101;
     public static final int PROCESSING = 102;

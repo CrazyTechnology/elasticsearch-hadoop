@@ -92,6 +92,7 @@ public class NetworkClient implements StatsAware, Closeable {
         }
 
         if (currentTransport != null) {
+            //更新重试连接次数
             stats.nodeRetries++;
         }
 

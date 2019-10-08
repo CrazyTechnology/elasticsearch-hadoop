@@ -1,8 +1,8 @@
 package org.elasticsearch.spark.rdd;
 
 import org.apache.commons.logging.LogFactory
-import org.apache.spark.{Partition, SparkContext}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{Partition, SparkContext}
 import org.elasticsearch.hadoop.rest.{PartitionDefinition, RestRepository, RestService}
 import org.elasticsearch.hadoop.util.ObjectUtils
 import org.elasticsearch.spark.cfg.SparkSettingsManager
@@ -19,14 +19,19 @@ private[spark] abstract class AbstractEsRDD[T: ClassTag](
 
   @transient protected lazy val logger = LogFactory.getLog(this.getClass())
 
+  //去ES请求元数据，获取封装成分区信息
   override def getPartitions: Array[Partition] = {
+    //esPartitions定义成了懒加载模式
     esPartitions.zipWithIndex.map { case(esPartition, idx) =>
+      //创建EsPartition
       new EsPartition(id, idx, esPartition)
     }.toArray
   }
 
   override def getPreferredLocations(split: Partition): Seq[String] = {
+    //获取partition最优的位置
     val esSplit = split.asInstanceOf[EsPartition]
+    //返回hostname
     esSplit.esPartition.getHostNames
   }
 
@@ -50,6 +55,7 @@ private[spark] abstract class AbstractEsRDD[T: ClassTag](
 
   //获取es分区信息
   @transient private[spark] lazy val esPartitions = {
+    //调用RestService中的findPartitions方法，返回的是list集合
     RestService.findPartitions(esCfg, logger)
   }
 }

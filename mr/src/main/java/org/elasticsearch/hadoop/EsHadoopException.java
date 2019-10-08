@@ -20,6 +20,7 @@ package org.elasticsearch.hadoop;
 
 /**
  * Base class for Elasticsearch Hadoop exceptions.
+ * ES-hadoop的异常基类
  */
 public class EsHadoopException extends RuntimeException {
 
